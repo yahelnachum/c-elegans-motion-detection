@@ -1,9 +1,9 @@
 import numpy as np
 import cv2
+import sys
 
-#C:\Users\YahelNachum\AppData\Local\Programs\Python\Python38-32\python.exe "C:\Users\YahelNachum\Desktop\Caroline Worms\motion.py"
-
-cap = cv2.VideoCapture('C:\\Users\\YahelNachum\\Desktop\\Caroline Worms\\caroline-worm-1.avi')
+video = sys.argv[1]
+cap = cv2.VideoCapture(video)
 stillImage = None
 
 #cv2.namedWindow('frame',cv2.WINDOW_NORMAL)
