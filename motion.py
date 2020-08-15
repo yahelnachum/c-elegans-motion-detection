@@ -43,14 +43,25 @@ dropletCirclePosition = (20,20)
 dropletCircleRadius = 20
 dropletCircleColor = (0, 0, 255)
 
-def click_and_crop(event, x, y, flags, param):
+isButtonDown = False
+
+def getDropletCircleRadius(x, y):
     global dropletCirclePosition, dropletCircleRadius
+    diffX = dropletCirclePosition[0] - x
+    diffY = dropletCirclePosition[1] - y
+    dropletCircleRadius = int(math.sqrt(diffX**2 + diffY**2))
+
+def click_and_crop(event, x, y, flags, param):
+    global dropletCirclePosition, dropletCircleRadius, isButtonDown
     if event == cv2.EVENT_LBUTTONDOWN:
         dropletCirclePosition = (x, y)
+        isButtonDown = True
+    elif event == cv2.EVENT_MOUSEMOVE:
+        if isButtonDown == True:
+            getDropletCircleRadius(x,y)
     elif event == cv2.EVENT_LBUTTONUP:
-        diffX = dropletCirclePosition[0] - x
-        diffY = dropletCirclePosition[1] - y
-        dropletCircleRadius = int(math.sqrt(diffX**2 + diffY**2));
+        isButtonDown = False
+        getDropletCircleRadius(x,y)
 cv2.setMouseCallback(window1Name, click_and_crop)
 
 stillImage = None
