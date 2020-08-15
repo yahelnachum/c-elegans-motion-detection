@@ -1,16 +1,10 @@
 import numpy as np
 import cv2
-import time
 
 #C:\Users\YahelNachum\AppData\Local\Programs\Python\Python38-32\python.exe "C:\Users\YahelNachum\Desktop\Caroline Worms\motion.py"
 
-#now = time.time()
 cap = cv2.VideoCapture('C:\\Users\\YahelNachum\\Desktop\\Caroline Worms\\caroline-worm-1.avi')
-#cap = cv2.VideoCapture('A4_P2_0805200001.avi')
 stillImage = None
-#future = time.time()
-#print("videocapture: ", future-now)
-#now = time.time()
 
 #cv2.namedWindow('frame',cv2.WINDOW_NORMAL)
 #cv2.resizeWindow('frame', 1200,1000)
@@ -25,10 +19,6 @@ count = 0
 limit = 1
 while(cap.isOpened()):
     ret, frame = cap.read()
-
-#    future = time.time()
-#    print("read: ", future-now)
-#    now = time.time()
 
     if not(ret):
         break
@@ -54,10 +44,6 @@ while(cap.isOpened()):
 #    cv2.imshow('frame',gray)
 #    cv2.imshow('frame',diff_frame)
 
-#    future = time.time()
-#    print("calculations: ", future-now)
-#    now = time.time()
-
 #    if (count % show == 0):
 
     frame = cv2.resize(frame, (width, height)) 
@@ -72,10 +58,6 @@ while(cap.isOpened()):
 #        cv2.imshow('thres',thresh_frame)
 
     count = count + 1
-
-#    future = time.time()
-#    print("imshow: ", future-now)
-#    now = time.time()
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
