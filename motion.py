@@ -90,11 +90,19 @@ def recalculateRadius():
     dropletCircleRadius = int(math.sqrt(x**2+y**2))
 
 def click_and_crop(event, x, y, flags, param):
-    global points
+    global points, isButtonDown
     if event == cv2.EVENT_LBUTTONDOWN:
+        isButtonDown = True
         points.append((x,y))
         recalculatePosition()
         recalculateRadius()
+    elif event == cv2.EVENT_MOUSEMOVE:
+        if isButtonDown == True:
+            points.append((x,y))
+            recalculatePosition()
+            recalculateRadius()
+    elif event == cv2.EVENT_LBUTTONUP:
+        isButtonDown = False
 
 cv2.setMouseCallback(window1Name, click_and_crop)
 
