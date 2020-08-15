@@ -2,10 +2,11 @@ import numpy as np
 import cv2
 import sys
 from win32api import GetSystemMetrics
+import math
 
 # get screen properties
-screenXPositionOffset = -16
-screenWidthOffset = 15
+screenXPositionOffset = -13
+screenWidthOffset = 10
 screenWidth = GetSystemMetrics(0) + screenWidthOffset
 screenHeight = GetSystemMetrics(1)
 
@@ -38,6 +39,19 @@ threshold = 10
 contourAreaMin = 10
 boundingRectColor = (0, 255, 0)
 boundingRectThickness = 3
+dropletCirclePosition = (20,20)
+dropletCircleRadius = 20
+dropletCircleColor = (0, 0, 255)
+
+def click_and_crop(event, x, y, flags, param):
+    global dropletCirclePosition, dropletCircleRadius
+    if event == cv2.EVENT_LBUTTONDOWN:
+        dropletCirclePosition = (x, y)
+    elif event == cv2.EVENT_LBUTTONUP:
+        diffX = dropletCirclePosition[0] - x
+        diffY = dropletCirclePosition[1] - y
+        dropletCircleRadius = int(math.sqrt(diffX**2 + diffY**2));
+cv2.setMouseCallback(window1Name, click_and_crop)
 
 stillImage = None
 while(cap.isOpened()):
@@ -74,6 +88,8 @@ while(cap.isOpened()):
     frame = cv2.resize(frame, (windowWidth, windowHeight)) 
     thresh_frame = cv2.resize(thresh_frame, (windowWidth, windowHeight)) 
     thresh_frame = cv2.cvtColor(thresh_frame, cv2.COLOR_GRAY2RGB)
+
+    cv2.circle(frame, dropletCirclePosition, dropletCircleRadius, dropletCircleColor, boundingRectThickness)
 
     # display images on windows
     cv2.imshow(window1Name,frame)
