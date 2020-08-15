@@ -1,85 +1,89 @@
 import numpy as np
 import cv2
-import time
+import sys
+from win32api import GetSystemMetrics
 
-#C:\Users\YahelNachum\AppData\Local\Programs\Python\Python38-32\python.exe "C:\Users\YahelNachum\Desktop\Caroline Worms\motion.py"
+# get screen properties
+screenXPositionOffset = -16
+screenWidthOffset = 15
+screenWidth = GetSystemMetrics(0) + screenWidthOffset
+screenHeight = GetSystemMetrics(1)
 
-#now = time.time()
-cap = cv2.VideoCapture('C:\\Users\\YahelNachum\\Desktop\\Caroline Worms\\caroline-worm-1.avi')
-#cap = cv2.VideoCapture('A4_P2_0805200001.avi')
+# get video and its properties
+video = sys.argv[1]
+cap = cv2.VideoCapture(video)
+capWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+capHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+# calculate window properties
+windows = 2
+windowWidth = int(screenWidth / windows)
+windowHeight = int(windowWidth / capWidth * capHeight)
+
+# set window properties
+window1Name = 'final'
+window2Name = 'mask'
+cv2.namedWindow(window1Name,cv2.WINDOW_NORMAL)
+cv2.namedWindow(window2Name,cv2.WINDOW_NORMAL)
+
+cv2.resizeWindow(window1Name, windowWidth, windowHeight)
+cv2.resizeWindow(window2Name, windowWidth, windowHeight)
+
+cv2.moveWindow(window1Name, 0 + screenXPositionOffset, 0);
+cv2.moveWindow(window2Name, windowWidth + screenXPositionOffset, 0);
+
+# general image processing properties
+blur = (11, 11)
+threshold = 10
+contourAreaMin = 10
+boundingRectColor = (0, 255, 0)
+boundingRectThickness = 3
+
 stillImage = None
-#future = time.time()
-#print("videocapture: ", future-now)
-#now = time.time()
-
-#cv2.namedWindow('frame',cv2.WINDOW_NORMAL)
-#cv2.resizeWindow('frame', 1200,1000)
-
-#cv2.namedWindow('thres',cv2.WINDOW_NORMAL)
-#cv2.resizeWindow('thres', 1200,1000)
-
-width=int(1800 * 0.4)
-height=int(1500 * 0.4)
-
-count = 0
-limit = 1
 while(cap.isOpened()):
     ret, frame = cap.read()
 
-#    future = time.time()
-#    print("read: ", future-now)
-#    now = time.time()
-
     if not(ret):
         break
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (11, 11), 0)
 
+    # turn image to grayscale and blur it
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, blur, 0)
+
+    # take first frame as the background
     if stillImage is None:
         stillImage = gray
         continue
-    # Still Image and current image.
-    diff_frame = cv2.absdiff(stillImage, gray)
-    thresh_frame = cv2.threshold(diff_frame, 8, 255, cv2.THRESH_BINARY)[1]
 
+    # get mask of motion
+    diff_frame = cv2.absdiff(stillImage, gray)
+    thresh_frame = cv2.threshold(diff_frame, threshold, 255, cv2.THRESH_BINARY)[1]
+
+    # get contours of mask
     contours,hierachy = cv2.findContours(thresh_frame.copy(),
         cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # draw bounding rectangles around contours
     for contour in contours:
-        if cv2.contourArea(contour) < 10:
+        if cv2.contourArea(contour) < contourAreaMin:
             continue
-#        motion = 1
         (x, y, w, h) = cv2.boundingRect(contour)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 3)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), boundingRectColor, boundingRectThickness)
 
-#    cv2.imshow('frame',gray)
-#    cv2.imshow('frame',diff_frame)
-
-#    future = time.time()
-#    print("calculations: ", future-now)
-#    now = time.time()
-
-#    if (count % show == 0):
-
-    frame = cv2.resize(frame, (width, height)) 
-    thresh_frame = cv2.resize(thresh_frame, (width, height)) 
+    # resize images for windows
+    frame = cv2.resize(frame, (windowWidth, windowHeight)) 
+    thresh_frame = cv2.resize(thresh_frame, (windowWidth, windowHeight)) 
     thresh_frame = cv2.cvtColor(thresh_frame, cv2.COLOR_GRAY2RGB)
-    if (count % limit == 0):
-        cv2.imshow('frame',frame)
-        cv2.moveWindow("frame", 0,0);
-        cv2.imshow('what',thresh_frame)
-        cv2.moveWindow("what", width,0);
-#        cv2.imshow('frame',frame)
-#        cv2.imshow('thres',thresh_frame)
 
-    count = count + 1
+    # display images on windows
+    cv2.imshow(window1Name,frame)
+    cv2.imshow(window2Name,thresh_frame)
 
-#    future = time.time()
-#    print("imshow: ", future-now)
-#    now = time.time()
-
+    # break out of program on 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+# clean up
 cap.release()
 cv2.destroyAllWindows()
 
