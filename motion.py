@@ -32,6 +32,7 @@ cv2.resizeWindow(window2Name, windowWidth, windowHeight)
 cv2.moveWindow(window1Name, 0 + screenXPositionOffset, 0);
 cv2.moveWindow(window2Name, windowWidth + screenXPositionOffset, 0);
 
+# general image processing properties
 blur = (11, 11)
 threshold = 10
 contourAreaMin = 10
@@ -44,33 +45,45 @@ while(cap.isOpened()):
 
     if not(ret):
         break
+
+    # turn image to grayscale and blur it
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, blur, 0)
 
+    # take first frame as the background
     if stillImage is None:
         stillImage = gray
         continue
-    # Still Image and current image.
+
+    # get mask of motion
     diff_frame = cv2.absdiff(stillImage, gray)
     thresh_frame = cv2.threshold(diff_frame, threshold, 255, cv2.THRESH_BINARY)[1]
 
+    # get contours of mask
     contours,hierachy = cv2.findContours(thresh_frame.copy(),
         cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # draw bounding rectangles around contours
     for contour in contours:
         if cv2.contourArea(contour) < contourAreaMin:
             continue
         (x, y, w, h) = cv2.boundingRect(contour)
         cv2.rectangle(frame, (x, y), (x + w, y + h), boundingRectColor, boundingRectThickness)
 
+    # resize images for windows
     frame = cv2.resize(frame, (windowWidth, windowHeight)) 
     thresh_frame = cv2.resize(thresh_frame, (windowWidth, windowHeight)) 
     thresh_frame = cv2.cvtColor(thresh_frame, cv2.COLOR_GRAY2RGB)
+
+    # display images on windows
     cv2.imshow(window1Name,frame)
     cv2.imshow(window2Name,thresh_frame)
 
+    # break out of program on 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+# clean up
 cap.release()
 cv2.destroyAllWindows()
 
