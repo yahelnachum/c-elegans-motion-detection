@@ -6,9 +6,7 @@ import math
 import re
 
 # get screen properties
-screenXPositionOffset = -13
-screenWidthOffset = 10
-screenWidth = GetSystemMetrics(0) + screenWidthOffset
+screenWidth = GetSystemMetrics(0)
 screenHeight = GetSystemMetrics(1)
 
 # get video and its properties
@@ -36,8 +34,8 @@ cv2.namedWindow(window2Name,cv2.WINDOW_NORMAL)
 cv2.resizeWindow(window1Name, windowWidth, windowHeight)
 cv2.resizeWindow(window2Name, windowWidth, windowHeight)
 
-cv2.moveWindow(window1Name, 0 + screenXPositionOffset, 0);
-cv2.moveWindow(window2Name, windowWidth + screenXPositionOffset, 0);
+cv2.moveWindow(window1Name, 0, 0);
+cv2.moveWindow(window2Name, windowWidth, 0);
 
 # general image processing properties
 # (blur, threshold, contours)
@@ -52,7 +50,7 @@ dropletCirclePosition = [(100,100)]
 dropletCircleRadius = [100]
 dropletCircleIndex=0
 cv2.namedWindow("Current Circle",cv2.WINDOW_NORMAL)
-cv2.moveWindow("Current Circle", 0 + screenXPositionOffset, windowHeight);
+cv2.moveWindow("Current Circle", 0, windowHeight);
 cv2.resizeWindow("Current Circle", 250, 250)
 
 # pythagorean theorem to get radius of circle
