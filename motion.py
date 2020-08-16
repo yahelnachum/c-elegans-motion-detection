@@ -3,6 +3,7 @@ import cv2
 import sys
 from win32api import GetSystemMetrics
 import math
+import re
 
 # get screen properties
 screenXPositionOffset = -13
@@ -11,15 +12,20 @@ screenWidth = GetSystemMetrics(0) + screenWidthOffset
 screenHeight = GetSystemMetrics(1)
 
 # get video and its properties
-video = sys.argv[1]
-cap = cv2.VideoCapture(video)
+videoFilePath = sys.argv[1]
+videoFileFolder = re.sub('/[^/]*$', '/', videoFilePath)
+p = re.compile('.*/([^/.]*).*$')
+m = p.match(videoFilePath)
+videoFileName = m.group(1)
+cap = cv2.VideoCapture(videoFilePath)
 capWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 capHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 # calculate window properties
-windows = 2
+windows = 3
 windowWidth = int(screenWidth / windows)
-windowHeight = int(windowWidth / capWidth * capHeight)
+downscaled_factor = windowWidth / capWidth
+windowHeight = int(downscaled_factor * capHeight)
 
 # set window properties
 window1Name = 'final'
@@ -39,105 +45,43 @@ threshold = 10
 contourAreaMin = 10
 boundingRectColor = (0, 255, 0)
 boundingRectThickness = 3
-dropletCirclePosition = [
-        (20,20),
-        (20,20),
-        (20,20)]
-dropletCircleRadius = [
-        20,
-        20,
-        20]
-dropletCircle=0
+dropletCirclePosition = [(100,100)]
+dropletCircleRadius = [100]
+dropletCircleIndex=0
+cv2.namedWindow("Current Circle",cv2.WINDOW_NORMAL)
+cv2.moveWindow("Current Circle", 0 + screenXPositionOffset, windowHeight);
+cv2.resizeWindow("Current Circle", 250, 250)
 
 isButtonDown = False
 
-"""
 def getDropletCircleRadius(x, y):
     global dropletCirclePosition, dropletCircleRadius
-    diffX = dropletCirclePosition[0] - x
-    diffY = dropletCirclePosition[1] - y
-    dropletCircleRadius = int(math.sqrt(diffX**2 + diffY**2))
+    diffX = dropletCirclePosition[dropletCircleIndex][0] - (x / downscaled_factor)
+    diffY = dropletCirclePosition[dropletCircleIndex][1] - (y / downscaled_factor)
+    dropletCircleRadius[dropletCircleIndex] = int(math.sqrt(diffX**2 + diffY**2))
 
+mode='center'
 def click_and_crop(event, x, y, flags, param):
-    global dropletCirclePosition, dropletCircleRadius, isButtonDown
+    global mode, dropletCirclePosition, dropletCircleRadius, isButtonDown, dropletCircleIndex
     if event == cv2.EVENT_LBUTTONDOWN:
-        dropletCirclePosition = (x, y)
         isButtonDown = True
-    elif event == cv2.EVENT_MOUSEMOVE:
-        if isButtonDown == True:
+        if mode == 'duplicate':
+            dropletCirclePosition.append((int(x/downscaled_factor),int(y/downscaled_factor)))
+            dropletCircleRadius.append(dropletCircleRadius[dropletCircleIndex])
+            dropletCircleIndex = len(dropletCirclePosition) - 1
+        if mode == 'center':
+            dropletCirclePosition[dropletCircleIndex] = (int(x/downscaled_factor),int(y/downscaled_factor))
+        if mode == 'radius':
             getDropletCircleRadius(x,y)
-    elif event == cv2.EVENT_LBUTTONUP:
-        isButtonDown = False
-        getDropletCircleRadius(x,y)
-cv2.setMouseCallback(window1Name, click_and_crop)
-
-points = []
-def recalculatePosition():
-    global dropletCirclePosition, points
-    x = 0
-    y = 0
-    for point in points:
-        x = x + point[0]
-        y = y + point[1]
-    x = x / len(points)
-    y = y / len(points)
-    dropletCirclePosition = (int(x),int(y))
-
-def recalculateRadius():
-    global dropletCirclePosition, dropletCircleRadius, points
-    x = 0
-    y = 0
-    for point in points:
-        x = x + abs(point[0] - dropletCirclePosition[0])
-        y = y + abs(point[1] - dropletCirclePosition[1])
-    x = x / len(points)
-    y = y / len(points)
-    dropletCircleRadius = int(math.sqrt(x**2+y**2))
-
-def click_and_crop(event, x, y, flags, param):
-    global points, isButtonDown
-    if event == cv2.EVENT_LBUTTONDOWN:
-        isButtonDown = True
-        points.append((x,y))
-        recalculatePosition()
-        recalculateRadius()
-    elif event == cv2.EVENT_MOUSEMOVE:
-        if isButtonDown == True:
-            points.append((x,y))
-            recalculatePosition()
-            recalculateRadius()
-    elif event == cv2.EVENT_LBUTTONUP:
-        isButtonDown = False
-
-cv2.setMouseCallback(window1Name, click_and_crop)
-"""
-
-def getDropletCircleRadius(x, y):
-    global dropletCirclePosition, dropletCircleRadius
-    diffX = dropletCirclePosition[dropletCircle][0] - x
-    diffY = dropletCirclePosition[dropletCircle][1] - y
-    dropletCircleRadius[dropletCircle] = int(math.sqrt(diffX**2 + diffY**2))
-
-center=True
-radius=False
-def click_and_crop(event, x, y, flags, param):
-    global center, radius, dropletCirclePosition, dropletCircleRadius, isButtonDown
-    if event == cv2.EVENT_LBUTTONDOWN:
-        isButtonDown = True
-        if center:
-            dropletCirclePosition[dropletCircle] = (x,y)
-        if radius:
-            getDropletCircleRadius(x,y)
-    elif event == cv2.EVENT_MOUSEMOVE:
-        a=5
+#    elif event == cv2.EVENT_MOUSEMOVE:
     elif event == cv2.EVENT_LBUTTONUP:
         isButtonDown = False
 cv2.setMouseCallback(window1Name, click_and_crop)
 
 font                   = cv2.FONT_HERSHEY_SIMPLEX
 bottomLeftCornerOfText = (10,500)
-fontScale              = 0.5
-lineType               = 0
+fontScale              = 2
+lineType               = 2
 
 stillImage = None
 while(cap.isOpened()):
@@ -170,48 +114,72 @@ while(cap.isOpened()):
         (x, y, w, h) = cv2.boundingRect(contour)
         cv2.rectangle(frame, (x, y), (x + w, y + h), boundingRectColor, boundingRectThickness)
 
-    # resize images for windows
-    frame = cv2.resize(frame, (windowWidth, windowHeight)) 
-    thresh_frame = cv2.resize(thresh_frame, (windowWidth, windowHeight)) 
-    thresh_frame = cv2.cvtColor(thresh_frame, cv2.COLOR_GRAY2RGB)
-
-    for i in [0,1,2]:
+    for i in range(len(dropletCirclePosition)):
 
         dropletCircleColor = (255, 255, 255)
         dropletCircleColor1 = (255, 255, 255)
         fontColor = (255,255,255)
-        if i == dropletCircle:
+        if i == dropletCircleIndex:
             fontColor = (0,0,255)
-            if center:
+            if mode == 'center':
                 dropletCircleColor = (0, 0, 255)
-            if radius:
+            if mode == 'radius':
                 dropletCircleColor1 = (0, 0, 255)
+            if mode == 'duplicate':
+                dropletCircleColor = (255, 0, 0)
+                dropletCircleColor1 = (255, 0, 0)
 
         cv2.circle(frame, dropletCirclePosition[i], dropletCircleRadius[i], dropletCircleColor1, boundingRectThickness)
-        cv2.circle(frame, dropletCirclePosition[i], 1, dropletCircleColor, boundingRectThickness)
-        cv2.putText(frame, str(i+1), dropletCirclePosition[i], font, fontScale, fontColor, lineType)
+        cv2.circle(frame, dropletCirclePosition[i], 10, dropletCircleColor, boundingRectThickness)
+        cv2.putText(frame, str(i), (dropletCirclePosition[i][0] + 10, dropletCirclePosition[i][1] - 10), font, fontScale, fontColor, lineType)
 
+        if i == dropletCircleIndex:
+            buffer = 40
+            y0 = max(0, min(dropletCirclePosition[i][1]-dropletCircleRadius[i]-buffer, capHeight))
+            y1 = max(0, min(dropletCirclePosition[i][1]+dropletCircleRadius[i]+buffer, capHeight))
+            x0 = max(0, min(dropletCirclePosition[i][0]-dropletCircleRadius[i]-buffer, capWidth))
+            x1 = max(0, min(dropletCirclePosition[i][0]+dropletCircleRadius[i]+buffer, capWidth))
+            crop_frame = frame[y0:y1, x0:x1]
+            zoom = 1.2
+            crop_frame = cv2.resize(crop_frame, (int((x1-x0)*zoom), int((y1-y0)*zoom)))
+            cv2.imshow("Current Circle",crop_frame)
+
+    # resize images for windows
+    downscaled_frame = cv2.resize(frame, (windowWidth, windowHeight))
+    downscaled_thresh_frame = cv2.resize(thresh_frame, (windowWidth, windowHeight))
+    downscaled_thresh_frame = cv2.cvtColor(downscaled_thresh_frame, cv2.COLOR_GRAY2RGB)
 
     # display images on windows
-    cv2.imshow(window1Name,frame)
-    cv2.imshow(window2Name,thresh_frame)
+    cv2.imshow(window1Name,downscaled_frame)
+    cv2.imshow(window2Name,downscaled_thresh_frame)
 
     # break out of program on 'q' key
     key = cv2.waitKey(1) & 0xFF
     if key == ord('q'):
         break
+    elif key == ord('d'):
+        mode = 'duplicate'
     elif key == ord('c'):
-        radius=False
-        center=True
+        mode = 'center'
     elif key == ord('r'):
-        radius=True
-        center=False
-    elif key == ord('1'):
-        dropletCircle=0
-    elif key == ord('2'):
-        dropletCircle=1
-    elif key == ord('3'):
-        dropletCircle=2
+        mode = 'radius'
+    elif key == ord('-'):
+        dropletCircleIndex = dropletCircleIndex - 1
+        if dropletCircleIndex < 0:
+            dropletCircleIndex = len(dropletCirclePosition) - 1
+    elif key == ord('='):
+        dropletCircleIndex = dropletCircleIndex + 1
+        if dropletCircleIndex > len(dropletCirclePosition) - 1:
+            dropletCircleIndex = 0
+    elif key == ord('s'):
+        text_file = open(videoFileFolder + videoFileName + "-circles.csv", "w")
+        text_file.write("circle,x,y,radius\n")
+        for i in range(len(dropletCirclePosition)):
+            text_file.write(str(i) + "," +
+                    str(dropletCirclePosition[i][0]) + "," +
+                    str(dropletCirclePosition[i][1]) + "," +
+                    str(dropletCircleRadius[i]) + "\n")
+        text_file.close()
 
 # clean up
 cap.release()
