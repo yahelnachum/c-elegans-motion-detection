@@ -92,6 +92,9 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 fontScale = 2
 lineType = 2
 
+stillImageTempCounter = 200
+stillImageTempTotal = stillImageTempCounter
+stillImageTemp = np.empty((0,0))
 stillImage = None
 while(cap.isOpened()):
     ret, frame = cap.read()
@@ -104,9 +107,18 @@ while(cap.isOpened()):
     gray = cv2.GaussianBlur(gray, blur, 0)
 
     # take first frame as the background
-    if stillImage is None:
+    if stillImageTempCounter > 0:
+        if not(stillImageTemp.any()):
+            stillImageTemp = gray / stillImageTempTotal
+        else:
+            stillImageTemp = stillImageTemp + gray / stillImageTempTotal
+        stillImageTempCounter = stillImageTempCounter - 1
+
+    if stillImageTempCounter == 0:
+        stillImage = stillImageTemp.astype(np.uint8)
+        stillImageTempCounter = stillImageTempCounter - 1
+    elif stillImageTempCounter > 0:
         stillImage = gray
-        continue
 
     # get mask of motion
     diff_frame = cv2.absdiff(stillImage, gray)
