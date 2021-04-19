@@ -20,10 +20,12 @@ capWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 capHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
 # calculate window properties
-windows = 3
-windowWidth = int(screenWidth / windows)
-downscaled_factor = windowWidth / capWidth
-windowHeight = int(downscaled_factor * capHeight)
+initialScale = 0.6
+downscaled_factor = 0.7
+initialWidth = int(capWidth * initialScale)
+initialHeight = int(capHeight * initialScale)
+windowWidth = int(initialWidth * downscaled_factor)
+windowHeight = int(initialHeight * downscaled_factor)
 
 # set window properties
 window1Name = 'final'
@@ -33,9 +35,6 @@ cv2.namedWindow(window2Name,cv2.WINDOW_NORMAL)
 
 cv2.resizeWindow(window1Name, windowWidth, windowHeight)
 cv2.resizeWindow(window2Name, windowWidth, windowHeight)
-
-cv2.moveWindow(window1Name, 0, 0);
-cv2.moveWindow(window2Name, windowWidth, 0);
 
 # general image processing properties
 # (blur, threshold, contours)
@@ -50,7 +49,6 @@ dropletCirclePosition = [(100,100)]
 dropletCircleRadius = [100]
 dropletCircleIndex=0
 cv2.namedWindow("Current Circle",cv2.WINDOW_NORMAL)
-cv2.moveWindow("Current Circle", 0, windowHeight);
 cv2.resizeWindow("Current Circle", 250, 250)
 
 # pythagorean theorem to get radius of circle
@@ -92,6 +90,9 @@ font = cv2.FONT_HERSHEY_SIMPLEX
 fontScale = 2
 lineType = 2
 
+stillImageTempCounter = 100
+stillImageTempTotal = stillImageTempCounter
+stillImageTemp = np.empty((0,0))
 stillImage = None
 while(cap.isOpened()):
     ret, frame = cap.read()
@@ -100,13 +101,23 @@ while(cap.isOpened()):
         break
 
     # turn image to grayscale and blur it
+    frame = cv2.resize(frame, (initialWidth, initialHeight))
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     gray = cv2.GaussianBlur(gray, blur, 0)
 
     # take first frame as the background
-    if stillImage is None:
+    if stillImageTempCounter > 0:
+        if not(stillImageTemp.any()):
+            stillImageTemp = gray / stillImageTempTotal
+        else:
+            stillImageTemp = stillImageTemp + gray / stillImageTempTotal
+        stillImageTempCounter = stillImageTempCounter - 1
+
+    if stillImageTempCounter == 0:
+        stillImage = stillImageTemp.astype(np.uint8)
+        stillImageTempCounter = stillImageTempCounter - 1
+    elif stillImageTempCounter > 0:
         stillImage = gray
-        continue
 
     # get mask of motion
     diff_frame = cv2.absdiff(stillImage, gray)
